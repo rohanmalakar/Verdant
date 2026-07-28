@@ -6,8 +6,8 @@ import { GoogleGenAI } from '@google/genai';
 import { INITIAL_PLANTS } from './src/data/plants.js';
 import { INITIAL_CATEGORIES } from './src/data/categories.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentFilename = typeof __filename === 'string' ? __filename : fileURLToPath(import.meta.url);
+const currentDirname = typeof __dirname === 'string' ? __dirname : path.dirname(currentFilename);
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
