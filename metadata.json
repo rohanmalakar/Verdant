@@ -1,0 +1,6 @@
+{
+  "name": "Verdant - Premium Plant E-Commerce",
+  "description": "A modern, full-stack nature-inspired plant e-commerce platform with indoor & outdoor plants, plant care guide, AI plant advisor, order tracking, and admin management dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
