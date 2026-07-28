@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { useAuth } from './context/AuthContext';
 
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -13,13 +14,13 @@ import { AIPlantAssistantModal } from './components/AIPlantAssistantModal';
 import { PlantQuizModal } from './components/PlantQuizModal';
 import { PlantCompareModal } from './components/PlantCompareModal';
 import { InvoiceModal } from './components/InvoiceModal';
+import { LoginPage } from './pages/LoginPage';
 
 import { HomePage } from './pages/HomePage';
 import { ShopPage } from './pages/ShopPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { CartCheckoutPage } from './pages/CartCheckoutPage';
 import { UserProfilePage } from './pages/UserProfilePage';
-import { AdminPage } from './pages/AdminPage';
 import { CareGuidesPage } from './pages/CareGuidesPage';
 import { AboutPage } from './pages/AboutPage';
 
@@ -29,8 +30,9 @@ import { CARE_GUIDES } from './data/careGuides';
 import { Plant, Order, CareGuide } from './types';
 
 export function AppContent() {
+  const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    'home' | 'shop' | 'care' | 'about' | 'profile' | 'admin' | 'checkout'
+    'home' | 'shop' | 'care' | 'about' | 'profile' | 'checkout' | 'wishlist'
   >('home');
 
   const [plantsList, setPlantsList] = useState<Plant[]>(SEED_PLANTS);
@@ -43,7 +45,16 @@ export function AppContent() {
   const [isAIAdvisorOpen, setIsAIAdvisorOpen] = useState(false);
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      setActiveTab('home');
+      setSelectedPlant(null);
+      setIsLoginOpen(false);
+    }
+  }, [isAuthenticated]);
 
   // Orders State
   const [ordersList, setOrdersList] = useState<Order[]>([
@@ -102,6 +113,7 @@ export function AppContent() {
         }}
         onOpenAIAdvisor={() => setIsAIAdvisorOpen(true)}
         onOpenCompare={() => setIsCompareOpen(true)}
+        onOpenLogin={() => setIsLoginOpen(true)}
       />
 
       {/* Main Content View Switcher */}
@@ -171,24 +183,22 @@ export function AppContent() {
               />
             )}
 
+            {activeTab === 'wishlist' && (
+              <UserProfilePage
+                initialTab="wishlist"
+                orders={ordersList}
+                onOpenInvoice={(order) => setInvoiceOrder(order)}
+                onOpenQuickView={(p) => setQuickViewPlant(p)}
+                onSelectPlant={(p) => setSelectedPlant(p)}
+              />
+            )}
+
             {activeTab === 'profile' && (
               <UserProfilePage
                 orders={ordersList}
                 onOpenInvoice={(order) => setInvoiceOrder(order)}
                 onOpenQuickView={(p) => setQuickViewPlant(p)}
                 onSelectPlant={(p) => setSelectedPlant(p)}
-                onGoToAdmin={() => setActiveTab('admin')}
-              />
-            )}
-
-            {activeTab === 'admin' && (
-              <AdminPage
-                plants={plantsList}
-                orders={ordersList}
-                onAddPlant={handleAddPlant}
-                onUpdatePlant={handleUpdatePlant}
-                onDeletePlant={handleDeletePlant}
-                onUpdateOrderStatus={handleUpdateOrderStatus}
               />
             )}
           </>
@@ -247,18 +257,44 @@ export function AppContent() {
         order={invoiceOrder}
         onClose={() => setInvoiceOrder(null)}
       />
+
+      {isLoginOpen && !isAuthenticated && (
+        <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm overflow-y-auto">
+          <div className="min-h-full flex items-center justify-center p-4 sm:p-6">
+            <div className="relative w-full max-w-6xl">
+              <button
+                type="button"
+                onClick={() => setIsLoginOpen(false)}
+                className="absolute -top-4 -right-4 z-10 w-10 h-10 rounded-full bg-white text-stone-800 shadow-lg border border-stone-200 flex items-center justify-center hover:bg-stone-50"
+                aria-label="Close login"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+              <LoginPage />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export function App() {
   return (
+    <>
+      <AppContent />
+    </>
+  );
+}
+
+function AppProviders() {
+  return (
     <ThemeProvider>
       <ToastProvider>
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-              <AppContent />
+              <App />
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
@@ -267,4 +303,4 @@ export function App() {
   );
 }
 
-export default App;
+export default AppProviders;

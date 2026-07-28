@@ -31,11 +31,11 @@ export function Footer({ onSelectCategory, setActiveTab }: FooterProps) {
               </p>
               <p className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#4CAF50]" />
-                <span>+1 (800) 555-PLANT</span>
+                <span>7999331355</span>
               </p>
               <p className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#4CAF50]" />
-                <span>hello@verdantplants.com</span>
+                <span>sheetalmalakar12@gmail.com</span>
               </p>
             </div>
           </div>

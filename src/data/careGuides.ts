@@ -54,7 +54,7 @@ export const CARE_GUIDES: CareGuide[] = [
     subtitle: 'Simple adjustments to light and watering when sunlight drops.',
     category: 'Seasonal Care',
     readTime: '5 min read',
-    image: 'https://images.unsplash.com/photo-1520302638584-89b50d173799?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGxhbnR8ZW58MHx8MHx8fDA%3D',
     overview: 'During colder dormant months, succulents drastically slow their growth. Reduce watering frequency to once a month or less to protect delicate root systems from fungal rot.',
     tips: [
       {

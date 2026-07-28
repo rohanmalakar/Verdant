@@ -2,143 +2,142 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User } from '../types';
 import { useToast } from './ToastContext';
 
+interface StoredUser extends User {
+  password: string;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  isAdmin: boolean;
   login: (email: string, password?: string) => Promise<boolean>;
   signup: (name: string, email: string, password?: string) => Promise<boolean>;
   logout: () => void;
-  loginAsDemoUser: () => void;
-  loginAsDemoAdmin: () => void;
   updateUser: (updatedData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEMO_USER: User = {
-  id: 'user-demo',
-  name: 'Sarah Jenkins',
-  email: 'sarah.j@example.com',
-  role: 'user',
-  avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200',
-  createdAt: new Date().toISOString(),
-  addresses: [
-    {
-      id: 'addr-1',
-      fullName: 'Sarah Jenkins',
-      street: '742 Evergreen Terrace',
-      city: 'Portland',
-      state: 'OR',
-      zipCode: '97201',
-      country: 'USA',
-      phone: '+1 (555) 234-5678',
-      isDefault: true
-    }
-  ]
-};
+const STORAGE_KEYS = {
+  users: 'verdant_users',
+  currentUser: 'verdant_user',
+  token: 'verdant_token'
+} as const;
 
-const DEMO_ADMIN: User = {
-  id: 'user-admin',
-  name: 'Verdant Admin',
-  email: 'admin@verdant.com',
-  role: 'admin',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
-  createdAt: new Date().toISOString(),
-  addresses: []
-};
+function readStorage<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+
+  const raw = window.localStorage.getItem(key);
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function createUserFromStoredUser(storedUser: StoredUser): User {
+  const { password: _password, ...user } = storedUser;
+  return user;
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('verdant_user');
-    return saved ? JSON.parse(saved) : DEMO_USER; // Default logged in as demo customer for smooth preview
-  });
-
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('verdant_token') || 'jwt-demo-token-user';
-  });
+  const [storedUsers, setStoredUsers] = useState<StoredUser[]>(() => readStorage(STORAGE_KEYS.users, []));
+  const [user, setUser] = useState<User | null>(() => readStorage<User | null>(STORAGE_KEYS.currentUser, null));
+  const [token, setToken] = useState<string | null>(() => readStorage<string | null>(STORAGE_KEYS.token, null));
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(storedUsers));
+  }, [storedUsers]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     if (user) {
-      localStorage.setItem('verdant_user', JSON.stringify(user));
+      window.localStorage.setItem(STORAGE_KEYS.currentUser, JSON.stringify(user));
     } else {
-      localStorage.removeItem('verdant_user');
+      window.localStorage.removeItem(STORAGE_KEYS.currentUser);
     }
   }, [user]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     if (token) {
-      localStorage.setItem('verdant_token', token);
+      window.localStorage.setItem(STORAGE_KEYS.token, token);
     } else {
-      localStorage.removeItem('verdant_token');
+      window.localStorage.removeItem(STORAGE_KEYS.token);
     }
   }, [token]);
 
   const login = async (email: string, password?: string): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUser(data.data.user);
-        setToken(data.data.token);
-        showToast(`Welcome back, ${data.data.user.name}!`);
-        return true;
-      } else {
-        showToast(data.message || 'Login failed', 'error');
-        return false;
-      }
-    } catch {
-      // Fallback local check
-      if (email.includes('admin')) {
-        setUser(DEMO_ADMIN);
-        setToken('jwt-demo-admin');
-      } else {
-        setUser(DEMO_USER);
-        setToken('jwt-demo-user');
-      }
-      showToast('Logged in successfully!');
-      return true;
+    const normalizedEmail = normalizeEmail(email);
+    const matchedUser = storedUsers.find((storedUser) => storedUser.email.toLowerCase() === normalizedEmail);
+
+    if (!matchedUser) {
+      showToast('No account found for that email. Create an account first.', 'error');
+      return false;
     }
+
+    if (matchedUser.password !== (password || '')) {
+      showToast('Incorrect password.', 'error');
+      return false;
+    }
+
+    const publicUser = createUserFromStoredUser(matchedUser);
+    setUser(publicUser);
+    setToken(`jwt-local-${publicUser.id}`);
+    showToast(`Welcome back, ${publicUser.name}!`);
+    return true;
   };
 
   const signup = async (name: string, email: string, password?: string): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUser(data.data.user);
-        setToken(data.data.token);
-        showToast(`Account created! Welcome to Verdant, ${name}.`);
-        return true;
-      } else {
-        showToast(data.message || 'Registration failed', 'error');
-        return false;
-      }
-    } catch {
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        name,
-        email,
-        role: 'user',
-        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
-        createdAt: new Date().toISOString(),
-        addresses: []
-      };
-      setUser(newUser);
-      setToken('jwt-demo-user');
-      showToast(`Welcome to Verdant, ${name}!`);
-      return true;
+    const normalizedEmail = normalizeEmail(email);
+
+    if (storedUsers.some((storedUser) => storedUser.email.toLowerCase() === normalizedEmail)) {
+      showToast('An account with that email already exists.', 'error');
+      return false;
     }
+
+    if (!password) {
+      showToast('Please choose a password.', 'error');
+      return false;
+    }
+
+    const newUser: StoredUser = {
+      id: `user-${Date.now()}`,
+      name,
+      email: normalizedEmail,
+      role: 'user',
+      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
+      createdAt: new Date().toISOString(),
+      addresses: [],
+      password
+    };
+
+    setStoredUsers((currentUsers) => [newUser, ...currentUsers]);
+    setUser(createUserFromStoredUser(newUser));
+    setToken(`jwt-local-${newUser.id}`);
+    showToast(`Account created! Welcome to Verdant, ${name}.`);
+    return true;
   };
 
   const logout = () => {
@@ -147,21 +146,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     showToast('You have been logged out.', 'info');
   };
 
-  const loginAsDemoUser = () => {
-    setUser(DEMO_USER);
-    setToken('jwt-demo-user');
-    showToast('Switched to Demo Customer Account');
-  };
-
-  const loginAsDemoAdmin = () => {
-    setUser(DEMO_ADMIN);
-    setToken('jwt-demo-admin');
-    showToast('Switched to Admin Portal Access');
-  };
-
   const updateUser = (updatedData: Partial<User>) => {
     if (user) {
-      setUser({ ...user, ...updatedData });
+      const updatedUser = { ...user, ...updatedData };
+      setUser(updatedUser);
+      setStoredUsers((currentUsers) =>
+        currentUsers.map((storedUser) =>
+          storedUser.id === user.id ? { ...storedUser, ...updatedData } : storedUser
+        )
+      );
     }
   };
 
@@ -171,12 +164,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         token,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin',
         login,
         signup,
         logout,
-        loginAsDemoUser,
-        loginAsDemoAdmin,
         updateUser
       }}
     >

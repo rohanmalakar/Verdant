@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   User as UserIcon,
@@ -22,7 +22,7 @@ interface UserProfilePageProps {
   onOpenInvoice: (order: Order) => void;
   onOpenQuickView: (plant: Plant) => void;
   onSelectPlant: (plant: Plant) => void;
-  onGoToAdmin?: () => void;
+  initialTab?: 'orders' | 'wishlist';
 }
 
 export function UserProfilePage({
@@ -30,12 +30,16 @@ export function UserProfilePage({
   onOpenInvoice,
   onOpenQuickView,
   onSelectPlant,
-  onGoToAdmin
+  initialTab = 'orders'
 }: UserProfilePageProps) {
   const { user, logout } = useAuth();
-  const { wishlist } = useWishlist();
+  const { wishlistItems } = useWishlist();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist' | 'address'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist' | 'address'>(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const userOrders = orders.filter((o) => o.userId === user?.id || user?.role === 'admin');
 
@@ -43,44 +47,6 @@ export function UserProfilePage({
     <div className="py-10 bg-[#FAF7F0] dark:bg-neutral-900 min-h-screen text-left">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Profile Header Banner */}
-        <div className="bg-white dark:bg-neutral-800 rounded-3xl p-6 sm:p-8 border border-stone-200/80 dark:border-neutral-700 shadow-xs mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#D9EAD3] dark:bg-emerald-950 flex items-center justify-center text-[#2E7D32] font-bold text-2xl">
-              {user?.name.charAt(0) || 'U'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-serif text-2xl font-bold text-stone-900 dark:text-neutral-100">
-                  {user?.name || 'Plant Enthusiast'}
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase">
-                  {user?.role || 'Customer'}
-                </span>
-              </div>
-              <p className="text-xs text-stone-500 dark:text-neutral-400 mt-1">{user?.email}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {user?.role === 'admin' && onGoToAdmin && (
-              <button
-                onClick={onGoToAdmin}
-                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs"
-              >
-                Admin Management Portal
-              </button>
-            )}
-
-            <button
-              onClick={logout}
-              className="px-4 py-2.5 rounded-xl bg-stone-100 dark:bg-neutral-700 hover:bg-rose-100 hover:text-rose-600 text-stone-700 dark:text-neutral-200 font-bold text-xs flex items-center gap-2 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Log Out</span>
-            </button>
-          </div>
-        </div>
-
         {/* Tab Selection */}
         <div className="flex border-b border-stone-200 dark:border-neutral-700 mb-8 gap-6">
           <button
@@ -104,7 +70,7 @@ export function UserProfilePage({
             }`}
           >
             <Heart className="w-4 h-4" />
-            <span>Saved Wishlist ({wishlist.length})</span>
+            <span>Saved Wishlist ({wishlistItems.length})</span>
           </button>
         </div>
 
@@ -176,17 +142,17 @@ export function UserProfilePage({
         {/* Wishlist Tab */}
         {activeTab === 'wishlist' && (
           <div>
-            {wishlist.length === 0 ? (
+            {wishlistItems.length === 0 ? (
               <div className="p-12 text-center bg-white dark:bg-neutral-800 rounded-3xl border border-stone-200 text-stone-400">
                 <Heart className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p className="font-bold text-sm text-stone-700 dark:text-neutral-200">Your wishlist is empty</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {wishlist.map((plant) => (
+                {wishlistItems.map((item) => (
                   <ProductCard
-                    key={plant.id}
-                    plant={plant}
+                    key={item.plant.id}
+                    plant={item.plant}
                     onQuickView={onOpenQuickView}
                     onSelectProduct={onSelectPlant}
                   />

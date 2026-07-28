@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { Plant, WishlistItem } from '../types';
 import { useToast } from './ToastContext';
+import { useAuth } from './AuthContext';
 
 interface WishlistContextType {
   wishlistItems: WishlistItem[];
@@ -13,14 +14,39 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const previousUserRef = useRef(user);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>(() => {
-    const saved = localStorage.getItem('verdant_wishlist');
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
+    const saved = window.localStorage.getItem('verdant_wishlist');
     return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('verdant_wishlist', JSON.stringify(wishlistItems));
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (wishlistItems.length === 0) {
+      window.localStorage.removeItem('verdant_wishlist');
+    } else {
+      window.localStorage.setItem('verdant_wishlist', JSON.stringify(wishlistItems));
+    }
   }, [wishlistItems]);
+
+  useEffect(() => {
+    if (previousUserRef.current && !user) {
+      setWishlistItems([]);
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('verdant_wishlist');
+      }
+    }
+
+    previousUserRef.current = user;
+  }, [user]);
 
   const isInWishlist = (plantId: string) => {
     return wishlistItems.some((item) => item.plant.id === plantId);

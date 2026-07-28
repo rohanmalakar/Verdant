@@ -21,7 +21,7 @@ export const INITIAL_CATEGORIES: Category[] = [
     id: 'cat-3',
     name: 'Succulents',
     slug: 'succulents',
-    image: 'https://images.unsplash.com/photo-1520302638584-89b50d173799?auto=format&fit=crop&q=80&w=600',
+    image: 'https://images.unsplash.com/photo-1620311497344-bce841c9c060?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8UGVhY2UlMjBMaWx5fGVufDB8fDB8fHww',
     description: 'Low-maintenance desert gems that retain water in fleshy, sculptural leaves.',
     itemCount: 15
   },

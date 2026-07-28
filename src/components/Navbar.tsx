@@ -1,24 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Sprout,
   Search,
   ShoppingBag,
   Heart,
   User as UserIcon,
-  Sun,
-  Moon,
   Menu,
   X,
   Sparkles,
-  ShieldAlert,
-  ArrowRight,
   GitCompare,
   HelpCircle
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { Plant } from '../types';
 
 interface NavbarProps {
@@ -27,6 +22,7 @@ interface NavbarProps {
   onOpenAIAdvisor: () => void;
   onOpenQuiz?: () => void;
   onOpenCompare: () => void;
+  onOpenLogin: () => void;
   allPlants?: Plant[];
   onSelectPlant?: (plant: Plant) => void;
 }
@@ -37,14 +33,17 @@ export function Navbar({
   onOpenAIAdvisor,
   onOpenQuiz,
   onOpenCompare,
+  onOpenLogin,
   allPlants = [],
   onSelectPlant = () => {}
 }: NavbarProps) {
   const { totalItemCount, setIsCartOpen } = useCart();
   const { wishlistCount } = useWishlist();
-  const { user, isAdmin, loginAsDemoUser, loginAsDemoAdmin, logout } = useAuth();
-  const { isDarkMode, toggleDarkMode } = useTheme();
+  const { user, logout } = useAuth();
 
+  const [showAnnouncement, setShowAnnouncement] = useState(() => {
+    return localStorage.getItem('verdant_announcement_dismissed') !== 'true';
+  });
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,9 +95,25 @@ export function Navbar({
   return (
     <header className="sticky top-0 z-40 w-full transition-all duration-300">
       {/* Top Announcement Bar */}
-      <div className="bg-[#2E7D32] text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2">
-        <span>🌿 Free Eco-Friendly Shipping on orders over $50! Use code <strong className="underline decoration-amber-300">GREENSPRING</strong> for 15% off.</span>
-      </div>
+      {showAnnouncement && (
+        <div className="bg-[#2E7D32] text-white text-xs py-2 px-4 font-medium flex items-center justify-center gap-3 relative">
+          <span className="text-center">
+            🌿 Free Eco-Friendly Shipping on orders over $50! Use code{' '}
+            <strong className="underline decoration-amber-300">GREENSPRING</strong> for 15% off.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setShowAnnouncement(false);
+              localStorage.setItem('verdant_announcement_dismissed', 'true');
+            }}
+            aria-label="Dismiss announcement"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-white/15 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Main Navigation Bar */}
       <div
@@ -163,7 +178,7 @@ export function Navbar({
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
+                onChange={(event) => handleSearchChange(event.target.value)}
                 onFocus={() => searchQuery.length > 1 && setShowSearchDropdown(true)}
                 placeholder="Search plants, care, categories..."
                 className="w-full pl-9 pr-4 py-2 text-xs rounded-full bg-stone-100 dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 text-stone-800 dark:text-neutral-200 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#4CAF50]"
@@ -176,7 +191,7 @@ export function Navbar({
                 <div className="p-2 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
                   Matching Plants ({searchSuggestions.length})
                 </div>
-                {searchSuggestions.map((plant) => (
+                {searchSuggestions.map((plant: Plant) => (
                   <button
                     key={plant.id}
                     onClick={() => handleSelectSuggestion(plant)}
@@ -212,15 +227,6 @@ export function Navbar({
               <GitCompare className="w-5 h-5" />
             </button>
 
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleDarkMode}
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              className="p-2 rounded-full hover:bg-stone-200/60 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 transition-colors"
-            >
-              {isDarkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
-            </button>
-
             {/* Wishlist Button */}
             <button
               onClick={() => setActiveTab('wishlist')}
@@ -251,32 +257,37 @@ export function Navbar({
 
             {/* User Account / Admin Menu */}
             <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-1.5 rounded-full hover:bg-stone-200/60 dark:hover:bg-neutral-800 transition-colors border border-stone-200 dark:border-neutral-700"
-              >
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-7 h-7 rounded-full object-cover"
-                  />
-                ) : (
-                  <UserIcon className="w-5 h-5 text-stone-700 dark:text-neutral-300" />
-                )}
-              </button>
+              {user ? (
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 p-1.5 rounded-full hover:bg-stone-200/60 dark:hover:bg-neutral-800 transition-colors border border-stone-200 dark:border-neutral-700"
+                >
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-7 h-7 rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="w-5 h-5 text-stone-700 dark:text-neutral-300" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={onOpenLogin}
+                  className="px-3.5 py-2 rounded-full bg-[#2E7D32] text-white text-xs font-semibold hover:bg-[#3f9142] transition-colors"
+                >
+                  Login
+                </button>
+              )}
 
               {/* User Dropdown */}
-              {showUserMenu && (
+              {showUserMenu && user && (
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-neutral-700 p-2 z-50">
                   <div className="p-3 border-b border-stone-100 dark:border-neutral-700">
-                    <p className="text-xs font-bold text-stone-800 dark:text-neutral-100">{user?.name}</p>
-                    <p className="text-[11px] text-stone-500 dark:text-neutral-400 truncate">{user?.email}</p>
-                    <span className={`inline-block mt-1 text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${
-                      isAdmin ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                    }`}>
-                      {isAdmin ? 'Store Admin' : 'Valued Customer'}
-                    </span>
+                    <p className="text-xs font-bold text-stone-800 dark:text-neutral-100">{user.name}</p>
+                    <p className="text-[11px] text-stone-500 dark:text-neutral-400 truncate">{user.email}</p>
+                    
                   </div>
 
                   <div className="py-1">
@@ -289,46 +300,6 @@ export function Navbar({
                     >
                       My Profile & Orders
                     </button>
-
-                    {isAdmin && (
-                      <button
-                        onClick={() => {
-                          setActiveTab('admin');
-                          setShowUserMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-[#2E7D32] dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg flex items-center justify-between"
-                      >
-                        <span>Admin Management Portal</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Switch Demo Roles Helper */}
-                  <div className="pt-2 border-t border-stone-100 dark:border-neutral-700">
-                    <p className="px-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-1">
-                      Quick Role Switch
-                    </p>
-                    <div className="flex gap-1 px-1">
-                      <button
-                        onClick={() => {
-                          loginAsDemoUser();
-                          setShowUserMenu(false);
-                        }}
-                        className="flex-1 py-1 text-[10px] font-medium rounded bg-stone-100 dark:bg-neutral-700 hover:bg-stone-200 text-stone-700 dark:text-neutral-200"
-                      >
-                        User Mode
-                      </button>
-                      <button
-                        onClick={() => {
-                          loginAsDemoAdmin();
-                          setShowUserMenu(false);
-                        }}
-                        className="flex-1 py-1 text-[10px] font-medium rounded bg-[#2E7D32] hover:bg-[#4CAF50] text-white"
-                      >
-                        Admin Mode
-                      </button>
-                    </div>
                   </div>
 
                   <div className="pt-2 mt-2 border-t border-stone-100 dark:border-neutral-700">
@@ -364,7 +335,7 @@ export function Navbar({
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
+                onChange={(event) => handleSearchChange(event.target.value)}
                 placeholder="Search plants..."
                 className="w-full pl-9 pr-4 py-2 text-xs rounded-full bg-stone-100 dark:bg-neutral-800 text-stone-800 dark:text-neutral-200"
               />
